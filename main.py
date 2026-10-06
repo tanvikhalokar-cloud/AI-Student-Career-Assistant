@@ -14,6 +14,7 @@ Base.metadata.create_all(bind=engine)
 
 class StudentCreate(BaseModel):
     name: str
+    email:str
     branch: str
     year: int
 
@@ -36,6 +37,7 @@ def get_student():
 def create_student(student: StudentCreate, db: Session = Depends(get_db)):
     new_student = Student(
         name=student.name,
+        email=student.email,
         branch=student.branch,
         year=student.year
     )
@@ -49,6 +51,7 @@ def create_student(student: StudentCreate, db: Session = Depends(get_db)):
         "student": {
             "id": new_student.id,
             "name": new_student.name,
+            "email": new_student.email,
             "branch": new_student.branch,
             "year": new_student.year
         }
