@@ -75,6 +75,8 @@ def update_student(student_id: int, student: StudentCreate, db: Session = Depend
     existing_student.name = student.name
     existing_student.branch = student.branch
     existing_student.year = student.year
+    existing_student.email = student.email
+    existing_student.skills = student.skills
 
     db.commit()
     db.refresh(existing_student)
@@ -85,7 +87,9 @@ def update_student(student_id: int, student: StudentCreate, db: Session = Depend
             "id": existing_student.id,
             "name": existing_student.name,
             "branch": existing_student.branch,
-            "year": existing_student.year
+            "year": existing_student.year,
+            "email": existing_student.email,
+            "skills": existing_student.skills,
         }
     }
 @app.delete("/student/{student_id}")
