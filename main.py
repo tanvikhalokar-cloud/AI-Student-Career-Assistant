@@ -1,5 +1,5 @@
 from fastapi import FastAPI, Depends
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 
@@ -14,7 +14,7 @@ Base.metadata.create_all(bind=engine)
 
 class StudentCreate(BaseModel):
     name: str
-    email:str
+    email: EmailStr
     skills: str
     branch: str
     year: int
