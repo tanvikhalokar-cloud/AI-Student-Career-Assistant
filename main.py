@@ -1,5 +1,5 @@
 from fastapi import FastAPI, Depends
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, field_validator
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 
@@ -13,11 +13,19 @@ Base.metadata.create_all(bind=engine)
 
 
 class StudentCreate(BaseModel):
-    name: str
+    name: str = Field(min_length=2, max_length=100)
     email: EmailStr
     skills: str = Field(min_length=2, max_length=200)
     branch: str
-    year: int
+    year: int = Field(ge=1, le=4)
+
+@field_validator("skills")
+@classmethod
+def skills_must_not_be_blank(cls, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise ValueError("Skills cannot be empty or only spaces")
+        return value
 
 
 @app.get("/")
