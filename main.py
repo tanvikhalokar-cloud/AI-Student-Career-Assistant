@@ -12,6 +12,7 @@ app = FastAPI()
 Base.metadata.create_all(bind=engine)
 
 
+# Student profile validation
 class StudentCreate(BaseModel):
     name: str = Field(min_length=2, max_length=100)
     email: EmailStr
@@ -19,13 +20,21 @@ class StudentCreate(BaseModel):
     branch: str
     year: int = Field(ge=1, le=4)
 
-@field_validator("skills")
-@classmethod
-def skills_must_not_be_blank(cls, value: str) -> str:
+    @field_validator("skills")
+    @classmethod
+    def skills_must_not_be_blank(cls, value: str) -> str:
         value = value.strip()
         if not value:
-            raise ValueError("Skills cannot be empty or only spaces")
+            raise ValueError(
+                "Skills cannot be empty or only spaces"
+            )
         return value
+
+
+# Skill-gap request model
+class SkillGapRequest(BaseModel):
+    student_skills: list[str]
+    required_skills: list[str]
 
 
 @app.get("/")
@@ -43,7 +52,10 @@ def get_student():
 
 
 @app.post("/student")
-def create_student(student: StudentCreate, db: Session = Depends(get_db)):
+def create_student(
+    student: StudentCreate,
+    db: Session = Depends(get_db)
+):
     new_student = Student(
         name=student.name,
         email=student.email,
@@ -68,14 +80,24 @@ def create_student(student: StudentCreate, db: Session = Depends(get_db)):
         }
     }
 
+
 @app.get("/students")
 def get_students(db: Session = Depends(get_db)):
     students = db.query(Student).all()
-
     return students
+
+
 @app.put("/student/{student_id}")
-def update_student(student_id: int, student: StudentCreate, db: Session = Depends(get_db)):
-    existing_student = db.query(Student).filter(Student.id == student_id).first()
+def update_student(
+    student_id: int,
+    student: StudentCreate,
+    db: Session = Depends(get_db)
+):
+    existing_student = (
+        db.query(Student)
+        .filter(Student.id == student_id)
+        .first()
+    )
 
     if not existing_student:
         return {"message": "Student not found"}
@@ -97,12 +119,21 @@ def update_student(student_id: int, student: StudentCreate, db: Session = Depend
             "branch": existing_student.branch,
             "year": existing_student.year,
             "email": existing_student.email,
-            "skills": existing_student.skills,
+            "skills": existing_student.skills
         }
     }
+
+
 @app.delete("/student/{student_id}")
-def delete_student(student_id: int, db: Session = Depends(get_db)):
-    student = db.query(Student).filter(Student.id == student_id).first()
+def delete_student(
+    student_id: int,
+    db: Session = Depends(get_db)
+):
+    student = (
+        db.query(Student)
+        .filter(Student.id == student_id)
+        .first()
+    )
 
     if not student:
         return {"message": "Student not found"}
@@ -111,6 +142,8 @@ def delete_student(student_id: int, db: Session = Depends(get_db)):
     db.commit()
 
     return {"message": "Student deleted successfully"}
+
+
 @app.get("/db-test")
 def db_test():
     with engine.connect() as connection:
@@ -119,3 +152,47 @@ def db_test():
             "database": "connected",
             "result": result.scalar()
         }
+
+
+# Skill-Gap Analysis API
+@app.post("/skill-gap")
+def analyze_skill_gap(data: SkillGapRequest):
+    student_skills = {
+        skill.strip().casefold()
+        for skill in data.student_skills
+        if skill.strip()
+    }
+
+    required_skills = []
+    seen_skills = set()
+
+    for skill in data.required_skills:
+        skill = skill.strip()
+        normalized = skill.casefold()
+
+        if skill and normalized not in seen_skills:
+            required_skills.append(skill)
+            seen_skills.add(normalized)
+
+    matched_skills = [
+        skill for skill in required_skills
+        if skill.casefold() in student_skills
+    ]
+
+    missing_skills = [
+        skill for skill in required_skills
+        if skill.casefold() not in student_skills
+    ]
+
+    total_required = len(required_skills)
+
+    match_percentage = (
+        round(len(matched_skills) / total_required * 100, 2)
+        if total_required else 0
+    )
+
+    return {
+        "matched_skills": matched_skills,
+        "missing_skills": missing_skills,
+        "match_percentage": match_percentage
+    }
