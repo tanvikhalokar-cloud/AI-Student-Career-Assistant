@@ -196,3 +196,73 @@ def analyze_skill_gap(data: SkillGapRequest):
         "missing_skills": missing_skills,
         "match_percentage": match_percentage
     }
+
+
+
+class CareerRecommendationRequest(BaseModel):
+    skills: list[str] = Field(min_length=1)
+
+    @field_validator("skills")
+    @classmethod
+    def validate_skills(cls, skills):
+        cleaned_skills = [
+            skill.strip()
+            for skill in skills
+            if skill.strip()
+        ]
+
+        if not cleaned_skills:
+            raise ValueError("At least one valid skill is required")
+
+        return cleaned_skills
+
+
+@app.post("/career-recommendations")
+def career_recommendations(data: CareerRecommendationRequest):
+    student_skills = {
+        skill.strip().casefold()
+        for skill in data.skills
+        if skill.strip()
+    }
+
+    career_roles = {
+        "Python Developer": ["Python", "SQL", "Git"],
+        "Data Analyst": ["Python", "SQL", "Statistics", "Power BI"],
+        "AI/ML Engineer": [
+            "Python", "Machine Learning", "Statistics", "NumPy"
+        ],
+        "Robotics Software Engineer": [
+            "Python", "C++", "ROS", "Mathematics"
+        ]
+    }
+
+    recommendations = []
+
+    for role, required_skills in career_roles.items():
+        matched = [
+            skill for skill in required_skills
+            if skill.casefold() in student_skills
+        ]
+
+        missing = [
+            skill for skill in required_skills
+            if skill.casefold() not in student_skills
+        ]
+
+        score = round(
+            len(matched) / len(required_skills) * 100, 2
+        )
+
+        recommendations.append({
+            "career_role": role,
+            "match_percentage": score,
+            "matched_skills": matched,
+            "missing_skills": missing
+        })
+
+    recommendations.sort(
+        key=lambda role: role["match_percentage"],
+        reverse=True
+    )
+
+    return {"recommendations": recommendations}
