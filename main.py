@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import text
 
 from database import engine, Base, get_db
-from models import Student
+from models import Student,Job
 
 
 app = FastAPI()
@@ -262,6 +262,110 @@ def career_recommendations(data: CareerRecommendationRequest):
 
     recommendations.sort(
         key=lambda role: role["match_percentage"],
+        reverse=True
+    )
+
+    return {"recommendations": recommendations}
+
+class JobCreate(BaseModel):
+    title: str = Field(min_length=2, max_length=100)
+    company: str = Field(min_length=2, max_length=100)
+    required_skills: str = Field(min_length=2, max_length=300)
+    job_type: str = Field(min_length=2, max_length=50)
+    location: str | None = None
+    apply_link: str | None = None
+
+
+@app.post("/jobs")
+def create_job(data: JobCreate, db: Session = Depends(get_db)):
+    new_job = Job(
+        title=data.title,
+        company=data.company,
+        required_skills=data.required_skills,
+        job_type=data.job_type,
+        location=data.location,
+        apply_link=data.apply_link
+    )
+
+    db.add(new_job)
+    db.commit()
+    db.refresh(new_job)
+
+    return {
+        "message": "Job created successfully",
+        "job": {
+            "id": new_job.id,
+            "title": new_job.title,
+            "company": new_job.company,
+            "required_skills": new_job.required_skills,
+            "job_type": new_job.job_type,
+            "location": new_job.location,
+            "apply_link": new_job.apply_link
+        }
+    }
+
+
+@app.get("/jobs")
+def get_jobs(db: Session = Depends(get_db)):
+    return db.query(Job).all()
+
+
+class JobRecommendationRequest(BaseModel):
+    skills: list[str] = Field(min_length=1)
+
+
+@app.post("/job-recommendations")
+def recommend_jobs(
+    data: JobRecommendationRequest,
+    db: Session = Depends(get_db)
+):
+    student_skills = {
+        skill.strip().casefold()
+        for skill in data.skills
+        if skill.strip()
+    }
+
+    jobs = db.query(Job).all()
+    recommendations = []
+
+    for job in jobs:
+        required_skills = [
+            skill.strip()
+            for skill in job.required_skills.split(",")
+            if skill.strip()
+        ]
+
+        matched_skills = [
+            skill for skill in required_skills
+            if skill.casefold() in student_skills
+        ]
+
+        missing_skills = [
+            skill for skill in required_skills
+            if skill.casefold() not in student_skills
+        ]
+
+        total_skills = len(required_skills)
+
+        match_percentage = (
+            round(len(matched_skills) / total_skills * 100, 2)
+            if total_skills else 0
+        )
+
+        recommendations.append({
+            "job_id": job.id,
+            "title": job.title,
+            "company": job.company,
+            "job_type": job.job_type,
+            "location": job.location,
+            "apply_link": job.apply_link,
+            "matched_skills": matched_skills,
+            "missing_skills": missing_skills,
+            "match_percentage": match_percentage
+        })
+
+    recommendations.sort(
+        key=lambda job: job["match_percentage"],
         reverse=True
     )
 

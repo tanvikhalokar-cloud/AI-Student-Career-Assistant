@@ -12,3 +12,15 @@ class Student(Base):
     skills = Column(String)
     branch = Column(String)
     year = Column(Integer)
+
+
+class Job(Base):
+    __tablename__ = "jobs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String, nullable=False)
+    company = Column(String, nullable=False)
+    required_skills = Column(String, nullable=False)
+    job_type = Column(String, nullable=False)
+    location = Column(String, nullable=True)
+    apply_link = Column(String, nullable=True)
