@@ -103,13 +103,14 @@ Tanvi Khalokar
 Under active development.
 
 
+
 ## Project Screenshots
 
 ### API Documentation
-![API Documentation](screenshots/api-documentation.png)
+![API Documentation](screenshots/api-documentation.png.png)
 
 ### Student API Response
-![Student API Response](screenshots/students-api.png)
+![Student API Response](screenshots/students-api.png.png)
 
 ### Job Recommendations
-![Job Recommendations](screenshots/job-recommendations.png)
+![Job Recommendations](screenshots/job-recommendations.png.png)
