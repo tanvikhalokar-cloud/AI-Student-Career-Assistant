@@ -101,3 +101,15 @@ Tanvi Khalokar
 ## Project Status
 
 Under active development.
+
+
+## Project Screenshots
+
+### API Documentation
+![API Documentation](screenshots/api-documentation.png)
+
+### Student API Response
+![Student API Response](screenshots/students-api.png)
+
+### Job Recommendations
+![Job Recommendations](screenshots/job-recommendations.png)
