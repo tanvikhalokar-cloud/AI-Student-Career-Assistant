@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI, Depends, HTTPException
 from pydantic import BaseModel, EmailStr, Field, field_validator
 from sqlalchemy.orm import Session
 from sqlalchemy import text
@@ -100,7 +100,10 @@ def update_student(
     )
 
     if not existing_student:
-        return {"message": "Student not found"}
+        raise HTTPException(
+            status_code=404,
+            detail="Student not found"
+        )
 
     existing_student.name = student.name
     existing_student.branch = student.branch
@@ -136,7 +139,10 @@ def delete_student(
     )
 
     if not student:
-        return {"message": "Student not found"}
+        raise HTTPException(
+            status_code=404,
+            detail="Student not found"
+        )
 
     db.delete(student)
     db.commit()
