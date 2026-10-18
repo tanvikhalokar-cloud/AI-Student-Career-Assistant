@@ -1,5 +1,5 @@
 from fastapi import FastAPI, Depends, HTTPException
-from pydantic import BaseModel, EmailStr, Field, field_validator
+from pydantic import BaseModel, EmailStr, Field, field_validator, HttpUrl
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 
@@ -279,7 +279,7 @@ class JobCreate(BaseModel):
     required_skills: str = Field(min_length=2, max_length=300)
     job_type: str = Field(min_length=2, max_length=50)
     location: str | None = None
-    apply_link: str | None = None
+    apply_link: HttpUrl | None = None
 
 
 @app.post("/jobs")
@@ -290,7 +290,7 @@ def create_job(data: JobCreate, db: Session = Depends(get_db)):
         required_skills=data.required_skills,
         job_type=data.job_type,
         location=data.location,
-        apply_link=data.apply_link
+       apply_link=str(data.apply_link) if data.apply_link else None
     )
 
     db.add(new_job)
