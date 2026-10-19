@@ -1,10 +1,11 @@
+
 from fastapi import FastAPI, Depends, HTTPException
 from pydantic import BaseModel, EmailStr, Field, field_validator, HttpUrl
 from sqlalchemy.orm import Session
-from sqlalchemy import text
+from sqlalchemy import text, func
 
 from database import engine, Base, get_db
-from models import Student,Job
+from models import Student, Job
 
 
 app = FastAPI()
@@ -25,9 +26,7 @@ class StudentCreate(BaseModel):
     def skills_must_not_be_blank(cls, value: str) -> str:
         value = value.strip()
         if not value:
-            raise ValueError(
-                "Skills cannot be empty or only spaces"
-            )
+            raise ValueError("Skills cannot be empty or only spaces")
         return value
 
 
@@ -83,8 +82,7 @@ def create_student(
 
 @app.get("/students")
 def get_students(db: Session = Depends(get_db)):
-    students = db.query(Student).all()
-    return students
+    return db.query(Student).all()
 
 
 @app.put("/student/{student_id}")
@@ -100,10 +98,7 @@ def update_student(
     )
 
     if not existing_student:
-        raise HTTPException(
-            status_code=404,
-            detail="Student not found"
-        )
+        raise HTTPException(status_code=404, detail="Student not found")
 
     existing_student.name = student.name
     existing_student.branch = student.branch
@@ -139,10 +134,7 @@ def delete_student(
     )
 
     if not student:
-        raise HTTPException(
-            status_code=404,
-            detail="Student not found"
-        )
+        raise HTTPException(status_code=404, detail="Student not found")
 
     db.delete(student)
     db.commit()
@@ -160,7 +152,7 @@ def db_test():
         }
 
 
-# Skill-Gap Analysis API
+# Skill-gap analysis API
 @app.post("/skill-gap")
 def analyze_skill_gap(data: SkillGapRequest):
     student_skills = {
@@ -191,7 +183,6 @@ def analyze_skill_gap(data: SkillGapRequest):
     ]
 
     total_required = len(required_skills)
-
     match_percentage = (
         round(len(matched_skills) / total_required * 100, 2)
         if total_required else 0
@@ -204,7 +195,7 @@ def analyze_skill_gap(data: SkillGapRequest):
     }
 
 
-
+# Career recommendations
 class CareerRecommendationRequest(BaseModel):
     skills: list[str] = Field(min_length=1)
 
@@ -255,9 +246,7 @@ def career_recommendations(data: CareerRecommendationRequest):
             if skill.casefold() not in student_skills
         ]
 
-        score = round(
-            len(matched) / len(required_skills) * 100, 2
-        )
+        score = round(len(matched) / len(required_skills) * 100, 2)
 
         recommendations.append({
             "career_role": role,
@@ -273,6 +262,8 @@ def career_recommendations(data: CareerRecommendationRequest):
 
     return {"recommendations": recommendations}
 
+
+# Job creation request validation
 class JobCreate(BaseModel):
     title: str = Field(min_length=2, max_length=100)
     company: str = Field(min_length=2, max_length=100)
@@ -282,20 +273,52 @@ class JobCreate(BaseModel):
     apply_link: HttpUrl | None = None
 
 
+# Create job with duplicate protection
 @app.post("/jobs")
 def create_job(data: JobCreate, db: Session = Depends(get_db)):
-    new_job = Job(
-        title=data.title,
-        company=data.company,
-        required_skills=data.required_skills,
-        job_type=data.job_type,
-        location=data.location,
-       apply_link=str(data.apply_link) if data.apply_link else None
+    title = data.title.strip()
+    company = data.company.strip()
+
+    if not title or not company:
+        raise HTTPException(
+            status_code=422,
+            detail="Job title and company cannot be blank"
+        )
+
+    existing_job = (
+        db.query(Job)
+        .filter(
+            func.lower(func.trim(Job.title)) == title.casefold(),
+            func.lower(func.trim(Job.company)) == company.casefold()
+        )
+        .first()
     )
 
-    db.add(new_job)
-    db.commit()
-    db.refresh(new_job)
+    if existing_job:
+        raise HTTPException(
+            status_code=409,
+            detail="This job already exists for this company"
+        )
+
+    new_job = Job(
+        title=title,
+        company=company,
+        required_skills=data.required_skills.strip(),
+        job_type=data.job_type.strip(),
+        location=data.location.strip() if data.location else None,
+        apply_link=str(data.apply_link) if data.apply_link else None
+    )
+
+    try:
+        db.add(new_job)
+        db.commit()
+        db.refresh(new_job)
+    except Exception:
+        db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail="Could not save the job. Please try again."
+        )
 
     return {
         "message": "Job created successfully",
@@ -316,6 +339,7 @@ def get_jobs(db: Session = Depends(get_db)):
     return db.query(Job).all()
 
 
+# Job recommendations
 class JobRecommendationRequest(BaseModel):
     skills: list[str] = Field(min_length=1)
 
@@ -352,7 +376,6 @@ def recommend_jobs(
         ]
 
         total_skills = len(required_skills)
-
         match_percentage = (
             round(len(matched_skills) / total_skills * 100, 2)
             if total_skills else 0
