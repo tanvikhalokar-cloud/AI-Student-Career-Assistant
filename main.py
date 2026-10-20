@@ -1,14 +1,23 @@
-
 from fastapi import FastAPI, Depends, HTTPException
 from pydantic import BaseModel, EmailStr, Field, field_validator, HttpUrl
 from sqlalchemy.orm import Session
 from sqlalchemy import text, func
 
 from database import engine, Base, get_db
-from models import Student, Job
+from models import Student, Job, User
+
+import jwt
+from datetime import datetime, timedelta, timezone
 
 
 app = FastAPI()
+
+from pwdlib import PasswordHash
+
+password_hash = PasswordHash.recommended()
+SECRET_KEY = "replace-this-with-a-long-random-secret-key"
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
 Base.metadata.create_all(bind=engine)
 
@@ -271,6 +280,101 @@ class JobCreate(BaseModel):
     job_type: str = Field(min_length=2, max_length=50)
     location: str | None = None
     apply_link: HttpUrl | None = None
+
+    
+class UserRegister(BaseModel):
+    email: EmailStr
+    password: str = Field(min_length=8, max_length=128)
+
+
+class UserLogin(BaseModel):
+    email: EmailStr
+    password: str = Field(min_length=8, max_length=128)
+
+def create_access_token(user_id: int, email: str):
+    expire = datetime.now(timezone.utc) + timedelta(
+        minutes=ACCESS_TOKEN_EXPIRE_MINUTES
+    )
+
+    payload = {
+        "sub": str(user_id),
+        "email": email,
+        "exp": expire
+    }
+
+    token = jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
+    return token
+
+@app.post("/register")
+def register_user(data: UserRegister, db: Session = Depends(get_db)):
+    email = str(data.email).strip().lower()
+
+    existing_user = db.query(User).filter(
+        User.email == email
+    ).first()
+
+    if existing_user:
+        raise HTTPException(
+            status_code=409,
+            detail="Email is already registered"
+        )
+
+    new_user = User(
+        email=email,
+        hashed_password=password_hash.hash(data.password)
+    )
+
+    try:
+        db.add(new_user)
+        db.commit()
+        db.refresh(new_user)
+    except Exception:
+        db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail="Could not register user. Please try again."
+        )
+
+    return {
+        "message": "Registration successful",
+        "user": {
+            "id": new_user.id,
+            "email": new_user.email
+        }
+    }
+
+
+
+@app.post("/login")
+def login_user(data: UserLogin, db: Session = Depends(get_db)):
+    email = str(data.email).strip().lower()
+
+    user = db.query(User).filter(User.email == email).first()
+
+    if not user or not password_hash.verify(
+        data.password, user.hashed_password
+    ):
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid email or password"
+        )
+
+    access_token = create_access_token(
+        user_id=user.id,
+        email=user.email
+    )
+
+    return {
+        "message": "Login successful",
+        "access_token": access_token,
+        "token_type": "bearer",
+        "user": {
+            "id": user.id,
+            "email": user.email
+        }
+    }
+
+
 
 
 # Create job with duplicate protection
