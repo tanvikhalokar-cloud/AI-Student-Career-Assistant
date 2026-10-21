@@ -2,6 +2,7 @@ from fastapi import FastAPI, Depends, HTTPException
 from pydantic import BaseModel, EmailStr, Field, field_validator, HttpUrl
 from sqlalchemy.orm import Session
 from sqlalchemy import text, func
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 from database import engine, Base, get_db
 from models import Student, Job, User
@@ -10,11 +11,13 @@ import jwt
 from datetime import datetime, timedelta, timezone
 
 
+
 app = FastAPI()
 
 from pwdlib import PasswordHash
 
 password_hash = PasswordHash.recommended()
+security = HTTPBearer()
 SECRET_KEY = "replace-this-with-a-long-random-secret-key"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
@@ -304,6 +307,50 @@ def create_access_token(user_id: int, email: str):
 
     token = jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
     return token
+
+
+
+def get_current_user(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db)
+):
+    credentials_exception = HTTPException(
+        status_code=401,
+        detail="Invalid or expired token",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+
+    token = credentials.credentials
+
+    try:
+        payload = jwt.decode(
+            token,
+            SECRET_KEY,
+            algorithms=[ALGORITHM]
+        )
+        user_id = int(payload.get("sub"))
+    except (jwt.InvalidTokenError, TypeError, ValueError):
+        raise credentials_exception
+
+    user = db.query(User).filter(User.id == user_id).first()
+
+    if user is None:
+        raise credentials_exception
+
+    return user
+
+
+
+@app.get("/profile")
+def get_profile(current_user: User = Depends(get_current_user)):
+    return {
+        "message": "Profile fetched successfully",
+        "user": {
+            "id": current_user.id,
+            "email": current_user.email
+        }
+    }
+
 
 @app.post("/register")
 def register_user(data: UserRegister, db: Session = Depends(get_db)):
