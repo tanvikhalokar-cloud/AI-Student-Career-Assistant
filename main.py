@@ -9,6 +9,9 @@ from models import Student, Job, User
 
 import jwt
 from datetime import datetime, timedelta, timezone
+import os
+from dotenv import load_dotenv
+load_dotenv()
 
 
 
@@ -18,7 +21,10 @@ from pwdlib import PasswordHash
 
 password_hash = PasswordHash.recommended()
 security = HTTPBearer()
-SECRET_KEY = "replace-this-with-a-long-random-secret-key"
+SECRET_KEY = os.getenv("SECRET_KEY")
+
+if not SECRET_KEY:
+    raise ValueError("SECRET_KEY is missing from .env file")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
