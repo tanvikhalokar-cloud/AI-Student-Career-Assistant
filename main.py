@@ -281,6 +281,7 @@ def career_recommendations(data: CareerRecommendationRequest):
     return {"recommendations": recommendations}
 
 
+
 # Job creation request validation
 class JobCreate(BaseModel):
     title: str = Field(min_length=2, max_length=100)
@@ -289,6 +290,25 @@ class JobCreate(BaseModel):
     job_type: str = Field(min_length=2, max_length=50)
     location: str | None = None
     apply_link: HttpUrl | None = None
+
+    @field_validator("title", "company", "required_skills", "job_type")
+    @classmethod
+    def reject_blank_fields(cls, value: str) -> str:
+        value = value.strip()
+
+        if not value:
+            raise ValueError("This field cannot be blank")
+
+        return value
+
+    @field_validator("location")
+    @classmethod
+    def clean_location(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+
+        value = value.strip()
+        return value or None
 
     
 class UserRegister(BaseModel):
