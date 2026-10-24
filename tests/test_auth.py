@@ -41,3 +41,19 @@ def test_profile_with_expired_token():
     response = client.get("/profile", headers=headers)
 
     assert response.status_code == 401
+
+def test_register_with_duplicate_email():
+    import uuid
+
+    email = f"test_{uuid.uuid4().hex[:10]}@example.com"
+    payload = {
+        "name": "Test User",
+        "email": email,
+        "password": "StrongPassword123!"
+    }
+
+    first_response = client.post("/register", json=payload)
+    assert first_response.status_code in (200, 201)
+
+    second_response = client.post("/register", json=payload)
+    assert second_response.status_code == 409    
