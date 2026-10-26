@@ -32,3 +32,16 @@ def test_student_rejects_invalid_year():
     response = client.post("/student", json=payload)
 
     assert response.status_code == 422
+
+def test_student_rejects_blank_name():
+    payload = {
+        "name": "   ",
+        "email": "blank.name@example.com",
+        "skills": "Python, SQL",
+        "branch": "Robotics and AI",
+        "year": 3,
+    }
+
+    response = client.post("/student", json=payload)
+
+    assert response.status_code == 422

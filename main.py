@@ -38,7 +38,13 @@ class StudentCreate(BaseModel):
     skills: str = Field(min_length=2, max_length=200)
     branch: str
     year: int = Field(ge=1, le=4)
-
+    @field_validator("name")
+    @classmethod
+    def name_must_not_be_blank(cls, value: str) -> str:
+        value = value.strip()
+        if len(value) < 2:
+            raise ValueError("Name must contain at least 2 non-space characters")
+        return value
     @field_validator("skills")
     @classmethod
     def skills_must_not_be_blank(cls, value: str) -> str:
