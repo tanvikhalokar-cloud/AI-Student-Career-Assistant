@@ -43,7 +43,6 @@ AI-Student-Career-Assistant/
 ├── database.py
 ├── requirements.txt
 ├── .gitignore
-├── .env
 ├── README.md
 │
 └── screenshots/
@@ -130,7 +129,7 @@ http://127.0.0.1:8000/docs
 | PUT | `/student/{student_id}` | Update a student record |
 | DELETE | `/student/{student_id}` | Delete a student record |
 | POST | `/skill-gap` | Analyze missing skills |
-| GET | `/career-recommendations` | Get career recommendations |
+| POST | `/career-recommendations` | Get career recommendations based on student skills |
 | POST | `/jobs` | Add a job or internship |
 | GET | `/jobs` | Retrieve saved jobs |
 | POST | `/job-recommendations` | Get skill-based job recommendations |
@@ -172,7 +171,8 @@ This screenshot demonstrates the job recommendation API.
 - Job recommendations use job records stored in the project database.
 - Live job scraping and external job feeds are not implemented yet.
 - The project currently provides backend API functionality; a dedicated frontend dashboard is not yet implemented.
-- Comprehensive automated testing and production deployment are still pending.
+- Automated tests are implemented using Pytest, with 19 tests currently passing.
+- Production deployment is still pending.
 
 ## Future Enhancements
 
@@ -180,7 +180,7 @@ This screenshot demonstrates the job recommendation API.
 - Live job and internship data integration
 - Aptitude practice and interview preparation
 - Student dashboard and frontend development
-- Automated testing using Pytest
+- Expand automated test coverage and add integration tests
 - Cloud deployment
 - Improved career recommendations using machine learning
 - Enhanced user profile management
