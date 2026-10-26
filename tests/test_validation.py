@@ -45,3 +45,16 @@ def test_student_rejects_blank_name():
     response = client.post("/student", json=payload)
 
     assert response.status_code == 422
+
+def test_student_rejects_one_character_name():
+    payload = {
+        "name": "A",
+        "email": "one.char@example.com",
+        "skills": "Python, SQL",
+        "branch": "Robotics and AI",
+        "year": 3,
+    }
+
+    response = client.post("/student", json=payload)
+
+    assert response.status_code == 422
